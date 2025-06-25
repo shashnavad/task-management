@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/task-management/services/task/handlers"
+	"github.com/task-management/services/task/repository"
+	"github.com/task-management/services/task/service"
 	"github.com/task-management/shared/events"
-	"github.com/task-management/task/handlers"
-	"github.com/task-management/task/repository"
-	"github.com/task-management/task/service"
 	"github.com/task-management/shared/middleware"
 )
 
