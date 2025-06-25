@@ -6,9 +6,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/task-management/reporting/handlers"
-	"github.com/task-management/reporting/repository"
-	"github.com/task-management/reporting/service"
+	"github.com/task-management/services/reporting/handlers"
+	"github.com/task-management/services/reporting/repository"
+	"github.com/task-management/services/reporting/service"
+	"github.com/task-management/shared/middleware"
 )
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 	router := gin.Default()
 
 	api := router.Group("/api/reports")
-	api.Use(authMiddleware())
+	api.Use(middleware.AuthMiddleware())
 	{
 		api.GET("/dashboard", reportHandler.GetDashboard)
 		api.GET("/project/:id/summary", reportHandler.GetProjectSummary)

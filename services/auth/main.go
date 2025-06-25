@@ -9,6 +9,7 @@ import (
 	"github.com/task-management/services/auth/handlers"
 	"github.com/task-management/services/auth/repository"
 	"github.com/task-management/services/auth/service"
+	"github.com/task-management/shared/middleware"
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	api := router.Group("/api/users")
-	api.Use(authHandler.AuthMiddleware())
+	api.Use(middleware.AuthMiddleware())
 	{
 		api.GET("/profile", authHandler.GetProfile)
 		api.PUT("/profile", authHandler.UpdateProfile)

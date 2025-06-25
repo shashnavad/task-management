@@ -1,6 +1,10 @@
 // shared/events/events.go
 package events
 
+import (
+	"fmt"
+)
+
 type TaskCreatedEvent struct {
 	TaskID     int    `json:"task_id"`
 	ProjectID  int    `json:"project_id"`
@@ -22,4 +26,22 @@ type ProjectCreatedEvent struct {
 	Name      string `json:"name"`
 	OwnerID   int    `json:"owner_id"`
 	Timestamp int64  `json:"timestamp"`
+}
+
+// Producer defines an interface for producing events to a message broker or event bus.
+type Producer interface {
+	Produce(topic string, value interface{}) error
+}
+
+// mockProducer is a simple implementation of Producer that prints events to stdout.
+type mockProducer struct{}
+
+func (m *mockProducer) Produce(topic string, value interface{}) error {
+	fmt.Printf("Produced event to topic %s: %+v\n", topic, value)
+	return nil
+}
+
+// NewProducer returns a new mockProducer instance.
+func NewProducer(brokers []string) (Producer, error) {
+	return &mockProducer{}, nil
 }

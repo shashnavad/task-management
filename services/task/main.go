@@ -10,6 +10,7 @@ import (
 	"github.com/task-management/task/handlers"
 	"github.com/task-management/task/repository"
 	"github.com/task-management/task/service"
+	"github.com/task-management/shared/middleware"
 )
 
 func main() {
@@ -31,7 +32,7 @@ func main() {
 	router := gin.Default()
 
 	api := router.Group("/api/tasks")
-	api.Use(authMiddleware())
+	api.Use(middleware.AuthMiddleware())
 	{
 		api.GET("", taskHandler.GetTasks)
 		api.POST("", taskHandler.CreateTask)

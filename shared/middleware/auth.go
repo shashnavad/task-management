@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/gin-contrib/cors"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -38,4 +39,9 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// CORS returns a gin.HandlerFunc for CORS support
+func CORS() gin.HandlerFunc {
+	return cors.Default()
 }

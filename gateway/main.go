@@ -8,7 +8,8 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/task-management/gateway/middleware"
+	"github.com/gorilla/websocket"
+	"github.com/task-management/shared/middleware"
 )
 
 type Gateway struct {
@@ -70,6 +71,48 @@ func (g *Gateway) proxyToService(serviceName string) gin.HandlerFunc {
 		c.Request.URL.Scheme = target.Scheme
 		c.Request.Header.Set("X-Forwarded-Host", c.Request.Header.Get("Host"))
 		proxy.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
+func (g *Gateway) proxyWebSocket(serviceName string) gin.HandlerFunc {
+	notificationURL := g.services[serviceName]
+	return func(c *gin.Context) {
+		// Upgrade the incoming request to a WebSocket
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		}
+		clientConn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		if err != nil {
+			log.Println("WebSocket upgrade failed:", err)
+			return
+		}
+		defer clientConn.Close()
+
+		// Connect to the backend WebSocket service
+		backendURL := "ws://" + notificationURL.Host + "/ws"
+		backendConn, _, err := websocket.DefaultDialer.Dial(backendURL, nil)
+		if err != nil {
+			log.Println("Failed to connect to backend WebSocket:", err)
+			return
+		}
+		defer backendConn.Close()
+
+		// Proxy messages between client and backend
+		proxy := func(src, dst *websocket.Conn) {
+			for {
+				mt, message, err := src.ReadMessage()
+				if err != nil {
+					break
+				}
+				err = dst.WriteMessage(mt, message)
+				if err != nil {
+					break
+				}
+			}
+		}
+		// Run proxy in both directions
+		go proxy(clientConn, backendConn)
+		proxy(backendConn, clientConn)
 	}
 }
 

@@ -6,43 +6,41 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/task-management/project/handlers"
-	"github.com/task-management/project/repository"
-	"github.com/task-management/project/service"
+	"github.com/task-management/services/project/handlers"
+	"github.com/task-management/services/project/repository"
+	"github.com/task-management/services/project/service"
+	"github.com/task-management/shared/middleware"
 )
 
 func main() {
-	// Initialize database connection
-	db := repository.InitDB()
-	defer db.Close()
-
-	// Initialize layers
-	projectRepo := repository.NewProjectRepository(db)
-	projectService := service.NewProjectService(projectRepo)
-	projectHandler := handlers.NewProjectHandler(projectService)
+	// Initialize in-memory repository, service, and handler
+	repo := repository.NewProjectRepository()
+	svc := service.NewProjectService(repo)
+	handler := handlers.NewProjectHandler(svc)
 
 	// Setup routes
 	router := gin.Default()
 
 	api := router.Group("/api/projects")
-	api.Use(authMiddleware()) // JWT validation middleware
+	api.Use(middleware.AuthMiddleware())
 	{
-		api.GET("", projectHandler.GetProjects)
-		api.POST("", projectHandler.CreateProject)
-		api.GET("/:id", projectHandler.GetProject)
-		api.PUT("/:id", projectHandler.UpdateProject)
-		api.DELETE("/:id", projectHandler.DeleteProject)
-		api.POST("/:id/members", projectHandler.AddMember)
-		api.DELETE("/:id/members/:userId", projectHandler.RemoveMember)
+		api.GET("", handler.GetProjects)
+		api.POST("", handler.CreateProject)
+		api.GET("/:id", handler.GetProject)
+		api.PUT("/:id", handler.UpdateProject)
+		api.DELETE("/:id", handler.DeleteProject)
+		api.POST("/:id/members", handler.AddMember)
+		api.DELETE("/:id/members/:userId", handler.RemoveMember)
 	}
 
 	log.Println("Project service starting on port 8002")
 	log.Fatal(http.ListenAndServe(":8002", router))
 }
 
-func authMiddleware() gin.HandlerFunc {
-	return gin.HandlerFunc(func(c *gin.Context) {
-		// JWT token validation logic here
-		c.Next()
-	})
+func InitProjectDB() *repository.ProjectRepository {
+	return repository.NewProjectRepository()
+}
+
+func InitTaskDB() *repository.ProjectRepository {
+	return repository.NewProjectRepository()
 }

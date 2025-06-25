@@ -6,9 +6,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/task-management/file/handlers"
-	"github.com/task-management/file/repository"
-	"github.com/task-management/file/service"
+	"github.com/task-management/services/file/handlers"
+	"github.com/task-management/services/file/repository"
+	"github.com/task-management/services/file/service"
+	"github.com/task-management/shared/middleware"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 	router.MaxMultipartMemory = 8 << 20 // 8 MiB
 
 	api := router.Group("/api/files")
-	api.Use(authMiddleware())
+	api.Use(middleware.AuthMiddleware())
 	{
 		api.POST("/upload", fileHandler.UploadFile)
 		api.GET("/:id", fileHandler.GetFile)
