@@ -2,10 +2,11 @@ package repository
 
 import (
 	"database/sql"
+
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/task-management/services/file/models"
 	"github.com/task-management/shared/utils"
 	"go.uber.org/zap"
-	_ "github.com/go-sql-driver/mysql"
 )
 
 type FileRepository struct {
@@ -92,4 +93,4 @@ func InitDB() *sql.DB {
 	}
 	utils.GetLogger().Info("Connected to file service database")
 	return db
-} 
+}

@@ -7,18 +7,18 @@ import (
 	"errors"
 	"strconv"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/task-management/shared/utils"
 	"go.uber.org/zap"
-	_ "github.com/go-sql-driver/mysql"
 )
 
 // DBUser represents a user in the database
 type DBUser struct {
-	ID       string
-	Username string
+	ID           string
+	Username     string
 	PasswordHash string
-	Email    string
-	FullName string
+	Email        string
+	FullName     string
 }
 
 // UserRepositoryInterface defines methods for the user repository
