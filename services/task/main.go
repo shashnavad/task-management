@@ -2,7 +2,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,17 +10,24 @@ import (
 	"github.com/task-management/services/task/service"
 	"github.com/task-management/shared/events"
 	"github.com/task-management/shared/middleware"
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
 )
 
 func main() {
+	utils.InitLogger()
+	logger := utils.GetLogger()
+	defer logger.Sync()
+
 	// Initialize database and event producer
 	db := repository.InitDB()
 	defer db.Close()
 
 	eventProducer, err := events.NewProducer([]string{"localhost:9092"})
 	if err != nil {
-		log.Fatal("Failed to create event producer:", err)
+		logger.Fatal("Failed to create event producer", zap.Error(err))
 	}
+	defer eventProducer.Close()
 
 	// Initialize layers
 	taskRepo := repository.NewTaskRepository(db)
@@ -44,6 +50,8 @@ func main() {
 		api.POST("/:id/comments", taskHandler.AddComment)
 	}
 
-	log.Println("Task service starting on port 8003")
-	log.Fatal(http.ListenAndServe(":8003", router))
+	logger.Info("Task service starting on port 8003")
+	if err := http.ListenAndServe(":8003", router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
 }

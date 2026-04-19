@@ -2,26 +2,32 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/task-management/services/notification/handlers"
 	"github.com/task-management/services/notification/service"
+	"github.com/task-management/shared/events"
 	"github.com/task-management/shared/middleware"
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
 )
 
 func main() {
+	utils.InitLogger()
+	logger := utils.GetLogger()
+	defer logger.Sync()
+
 	// Initialize notification service
 	notificationService := service.NewNotificationService()
 	notificationHandler := handlers.NewNotificationHandler(notificationService)
 
-	// Optionally, initialize event consumer if needed
-	// consumer, err := events.NewConsumer([]string{"localhost:9092"}, "notification-group")
-	// if err != nil {
-	// 	log.Fatal("Failed to create event consumer:", err)
-	// }
-	// go consumer.ConsumeEvents([]string{"task.created", "task.updated", "project.created"}, notificationService.HandleEvent)
+	// Initialize event consumer
+	consumer, err := events.NewConsumer([]string{"localhost:9092"}, "notification-group")
+	if err != nil {
+		logger.Fatal("Failed to create event consumer", zap.Error(err))
+	}
+	go consumer.ConsumeEvents([]string{"task.created", "task.updated", "project.created"}, notificationService.HandleEvent)
 
 	// Setup routes
 	router := gin.Default()
@@ -37,6 +43,8 @@ func main() {
 		api.POST("/send", notificationHandler.SendNotification)
 	}
 
-	log.Println("Notification service starting on port 8005")
-	log.Fatal(http.ListenAndServe(":8005", router))
+	logger.Info("Notification service starting on port 8005")
+	if err := http.ListenAndServe(":8005", router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
 }

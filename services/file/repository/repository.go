@@ -3,8 +3,8 @@ package repository
 import (
 	"database/sql"
 	"github.com/task-management/services/file/models"
-	"log"
-
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -85,11 +85,11 @@ func (r *FileRepository) GetFilesByTaskID(taskID int) ([]*models.File, error) {
 func InitDB() *sql.DB {
 	db, err := sql.Open("mysql", "username:password@tcp(localhost:3306)/file_service")
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		utils.GetLogger().Fatal("Failed to connect to database", zap.Error(err))
 	}
 	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+		utils.GetLogger().Fatal("Failed to ping database", zap.Error(err))
 	}
-	log.Println("Connected to file service database")
+	utils.GetLogger().Info("Connected to file service database")
 	return db
 } 

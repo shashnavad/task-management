@@ -2,7 +2,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,9 +9,15 @@ import (
 	"github.com/task-management/services/project/repository"
 	"github.com/task-management/services/project/service"
 	"github.com/task-management/shared/middleware"
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
 )
 
 func main() {
+	utils.InitLogger()
+	logger := utils.GetLogger()
+	defer logger.Sync()
+
 	// Initialize in-memory repository, service, and handler
 	repo := repository.NewProjectRepository()
 	svc := service.NewProjectService(repo)
@@ -33,8 +38,10 @@ func main() {
 		api.DELETE("/:id/members/:userId", handler.RemoveMember)
 	}
 
-	log.Println("Project service starting on port 8002")
-	log.Fatal(http.ListenAndServe(":8002", router))
+	logger.Info("Project service starting on port 8002")
+	if err := http.ListenAndServe(":8002", router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
 }
 
 func InitProjectDB() *repository.ProjectRepository {

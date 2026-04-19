@@ -2,7 +2,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -10,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/task-management/shared/middleware"
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
 )
 
 type Gateway struct {
@@ -83,7 +84,7 @@ func (g *Gateway) proxyWebSocket(serviceName string) gin.HandlerFunc {
 		}
 		clientConn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
-			log.Println("WebSocket upgrade failed:", err)
+			utils.GetLogger().Error("WebSocket upgrade failed", zap.Error(err))
 			return
 		}
 		defer clientConn.Close()
@@ -92,7 +93,7 @@ func (g *Gateway) proxyWebSocket(serviceName string) gin.HandlerFunc {
 		backendURL := "ws://" + notificationURL.Host + "/ws"
 		backendConn, _, err := websocket.DefaultDialer.Dial(backendURL, nil)
 		if err != nil {
-			log.Println("Failed to connect to backend WebSocket:", err)
+			utils.GetLogger().Error("Failed to connect to backend WebSocket", zap.Error(err))
 			return
 		}
 		defer backendConn.Close()
@@ -119,15 +120,21 @@ func (g *Gateway) proxyWebSocket(serviceName string) gin.HandlerFunc {
 func parseURL(rawURL string) *url.URL {
 	url, err := url.Parse(rawURL)
 	if err != nil {
-		log.Fatal("Invalid service URL:", rawURL)
+		utils.GetLogger().Fatal("Invalid service URL", zap.String("url", rawURL), zap.Error(err))
 	}
 	return url
 }
 
 func main() {
+	utils.InitLogger()
+	logger := utils.GetLogger()
+	defer logger.Sync()
+
 	gateway := NewGateway()
 	router := gateway.setupRoutes()
 
-	log.Println("API Gateway starting on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	logger.Info("API Gateway starting on port 8080")
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
 }

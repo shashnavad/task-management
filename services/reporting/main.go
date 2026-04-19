@@ -2,7 +2,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,9 +9,15 @@ import (
 	"github.com/task-management/services/reporting/repository"
 	"github.com/task-management/services/reporting/service"
 	"github.com/task-management/shared/middleware"
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
 )
 
 func main() {
+	utils.InitLogger()
+	logger := utils.GetLogger()
+	defer logger.Sync()
+
 	// Initialize database connections to all services
 	authDB := repository.InitAuthDB()
 	projectDB := repository.InitProjectDB()
@@ -41,6 +46,8 @@ func main() {
 		api.GET("/export/pdf", reportHandler.ExportToPDF)
 	}
 
-	log.Println("Reporting service starting on port 8006")
-	log.Fatal(http.ListenAndServe(":8006", router))
+	logger.Info("Reporting service starting on port 8006")
+	if err := http.ListenAndServe(":8006", router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
 }

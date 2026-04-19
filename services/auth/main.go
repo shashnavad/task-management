@@ -2,7 +2,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,9 +9,15 @@ import (
 	"github.com/task-management/services/auth/repository"
 	"github.com/task-management/services/auth/service"
 	"github.com/task-management/shared/middleware"
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
 )
 
 func main() {
+	utils.InitLogger()
+	logger := utils.GetLogger()
+	defer logger.Sync()
+
 	// Initialize database connection
 	db := repository.InitDB()
 	defer db.Close()
@@ -40,6 +45,8 @@ func main() {
 		api.PUT("/profile", authHandler.UpdateProfile)
 	}
 
-	log.Println("Auth service starting on port 8001")
-	log.Fatal(http.ListenAndServe(":8001", router))
+	logger.Info("Auth service starting on port 8001")
+	if err := http.ListenAndServe(":8001", router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
 }

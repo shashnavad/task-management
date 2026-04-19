@@ -1,12 +1,15 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/task-management/services/notification/models"
+	"github.com/task-management/shared/events"
 )
 
 type NotificationService struct {
@@ -105,5 +108,49 @@ func (s *NotificationService) DeleteNotification(notificationID int) error {
 		return errors.New("notification not found")
 	}
 	delete(s.notifications, notificationID)
+	return nil
+}
+
+func (s *NotificationService) HandleEvent(topic string, value []byte) error {
+	switch topic {
+	case "task.created":
+		var event events.TaskCreatedEvent
+		if err := json.Unmarshal(value, &event); err != nil {
+			log.Printf("Failed to unmarshal task.created event: %v", err)
+			return err
+		}
+		// Notify assignee if exists
+		if event.AssigneeID != nil {
+			notification := &models.Notification{
+				UserID:  *event.AssigneeID,
+				Message: "You have been assigned a new task: " + event.Title,
+				Type:    "task_assigned",
+			}
+			_, err := s.SendNotification(notification)
+			if err != nil {
+				log.Printf("Failed to send notification: %v", err)
+			}
+		}
+	case "task.updated":
+		var event events.TaskUpdatedEvent
+		if err := json.Unmarshal(value, &event); err != nil {
+			log.Printf("Failed to unmarshal task.updated event: %v", err)
+			return err
+		}
+		// Notify assignee or creator
+		// For simplicity, notify user who initiated if different
+		if event.UserID != event.UpdatedBy {
+			notification := &models.Notification{
+				UserID:  event.UpdatedBy,
+				Message: "Task updated",
+				Type:    "task_updated",
+			}
+			_, err := s.SendNotification(notification)
+			if err != nil {
+				log.Printf("Failed to send notification: %v", err)
+			}
+		}
+		// Add more cases as needed
+	}
 	return nil
 }

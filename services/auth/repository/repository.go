@@ -5,10 +5,11 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"log"
 	"strconv"
 
-	_ "github.com/go-sql-driver/mysql" // MySQL driver
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // DBUser represents a user in the database
@@ -44,16 +45,16 @@ func InitDB() *sql.DB {
 	// Replace with your actual database connection details
 	db, err := sql.Open("mysql", "username:password@tcp(localhost:3306)/auth_service")
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		utils.GetLogger().Fatal("Failed to connect to database", zap.Error(err))
 	}
 
 	// Test the connection
 	err = db.Ping()
 	if err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+		utils.GetLogger().Fatal("Failed to ping database", zap.Error(err))
 	}
 
-	log.Println("Connected to database")
+	utils.GetLogger().Info("Connected to database")
 	return db
 }
 

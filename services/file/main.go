@@ -2,7 +2,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,9 +9,15 @@ import (
 	"github.com/task-management/services/file/repository"
 	"github.com/task-management/services/file/service"
 	"github.com/task-management/shared/middleware"
+	"github.com/task-management/shared/utils"
+	"go.uber.org/zap"
 )
 
 func main() {
+	utils.InitLogger()
+	logger := utils.GetLogger()
+	defer logger.Sync()
+
 	// Initialize database
 	db := repository.InitDB()
 	defer db.Close()
@@ -37,6 +42,8 @@ func main() {
 		api.GET("/task/:taskId", fileHandler.GetTaskFiles)
 	}
 
-	log.Println("File service starting on port 8004")
-	log.Fatal(http.ListenAndServe(":8004", router))
+	logger.Info("File service starting on port 8004")
+	if err := http.ListenAndServe(":8004", router); err != nil {
+		logger.Fatal("Failed to start server", zap.Error(err))
+	}
 }

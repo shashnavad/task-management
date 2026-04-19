@@ -10,11 +10,13 @@ type Task struct {
 	ProjectID   int        `json:"project_id" db:"project_id" binding:"required"`
 	AssigneeID  *int       `json:"assignee_id" db:"assignee_id"`
 	CreatorID   int        `json:"creator_id" db:"creator_id"`
+	CreatedBy   int        `json:"created_by" db:"created_by"`
 	Status      string     `json:"status" db:"status"`
 	Priority    string     `json:"priority" db:"priority"`
 	DueDate     *time.Time `json:"due_date" db:"due_date"`
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy   int        `json:"updated_by" db:"updated_by"`
 }
 
 type TaskComment struct {

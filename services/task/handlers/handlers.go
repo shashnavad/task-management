@@ -42,6 +42,11 @@ func (h *TaskHandler) GetTask(c *gin.Context) {
 }
 
 func (h *TaskHandler) CreateTask(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
 	var req models.CreateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -55,11 +60,11 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 		Priority:    req.Priority,
 		DueDate:     req.DueDate,
 		Status:      "open",
+		CreatedBy:   userID.(int),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	// You may want to get CreatorID from auth context
-	if err := h.service.CreateTask(task); err != nil {
+	if err := h.service.CreateTask(task, userID.(int)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -67,6 +72,11 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 }
 
 func (h *TaskHandler) UpdateTask(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
@@ -85,9 +95,10 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 		AssigneeID:  req.AssigneeID,
 		Priority:    req.Priority,
 		DueDate:     req.DueDate,
+		UpdatedBy:   userID.(int),
 		UpdatedAt:   time.Now(),
 	}
-	if err := h.service.UpdateTask(task); err != nil {
+	if err := h.service.UpdateTask(task, userID.(int)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -95,12 +106,17 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 }
 
 func (h *TaskHandler) DeleteTask(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
 		return
 	}
-	if err := h.service.DeleteTask(id); err != nil {
+	if err := h.service.DeleteTask(id, userID.(int)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -108,6 +124,11 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 }
 
 func (h *TaskHandler) AssignTask(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
@@ -120,7 +141,7 @@ func (h *TaskHandler) AssignTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.service.AssignTask(id, req.AssigneeID); err != nil {
+	if err := h.service.AssignTask(id, req.AssigneeID, userID.(int)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -128,6 +149,11 @@ func (h *TaskHandler) AssignTask(c *gin.Context) {
 }
 
 func (h *TaskHandler) UpdateStatus(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
@@ -140,7 +166,7 @@ func (h *TaskHandler) UpdateStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.service.UpdateStatus(id, req.Status); err != nil {
+	if err := h.service.UpdateStatus(id, req.Status, userID.(int)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -148,13 +174,17 @@ func (h *TaskHandler) UpdateStatus(c *gin.Context) {
 }
 
 func (h *TaskHandler) AddComment(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
 		return
 	}
 	var req struct {
-		UserID  int    `json:"user_id" binding:"required"`
 		Content string `json:"content" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -163,10 +193,10 @@ func (h *TaskHandler) AddComment(c *gin.Context) {
 	}
 	comment := &models.TaskComment{
 		TaskID:  id,
-		UserID:  req.UserID,
+		UserID:  userID.(int),
 		Content: req.Content,
 	}
-	if err := h.service.AddComment(comment); err != nil {
+	if err := h.service.AddComment(comment, userID.(int)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
