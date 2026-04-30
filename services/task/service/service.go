@@ -1,9 +1,13 @@
 package service
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/task-management/services/task/models"
 	"github.com/task-management/services/task/repository"
 	"github.com/task-management/shared/events"
+	"github.com/task-management/shared/saga"
 )
 
 type TaskService struct {
@@ -24,8 +28,18 @@ func (s *TaskService) GetTask(id int) (*models.Task, error) {
 }
 
 func (s *TaskService) CreateTask(task *models.Task, userID int) error {
-	err := s.repo.CreateTask(task)
-	if err == nil {
+	ctx := context.Background()
+	sagaObj := saga.NewSaga(fmt.Sprintf("task-creation-%d", task.ID), s.eventProducer)
+
+	// Step 1: Create task in database
+	sagaObj.AddStep("create_task", func(ctx context.Context) error {
+		return s.repo.CreateTask(task)
+	}, func(ctx context.Context) error {
+		return s.repo.DeleteTask(task.ID) // Compensation: delete task
+	})
+
+	// Step 2: Publish event for reporting
+	sagaObj.AddStep("publish_event", func(ctx context.Context) error {
 		event := events.TaskCreatedEvent{
 			TaskID:     task.ID,
 			ProjectID:  task.ProjectID,
@@ -35,9 +49,13 @@ func (s *TaskService) CreateTask(task *models.Task, userID int) error {
 			UserID:     userID,
 			Timestamp:  task.CreatedAt.Unix(),
 		}
-		_ = s.eventProducer.Produce("task.created", event)
-	}
-	return err
+		return s.eventProducer.Produce("task.created", event)
+	}, func(ctx context.Context) error {
+		// Compensation: publish a task.deleted event
+		return s.eventProducer.Produce("task.deleted", map[string]interface{}{"task_id": task.ID})
+	})
+
+	return sagaObj.Execute(ctx)
 }
 
 func (s *TaskService) UpdateTask(task *models.Task, userID int) error {
