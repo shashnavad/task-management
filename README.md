@@ -1,7 +1,7 @@
 # Task Management Microservices Platform
 
 ## Overview
-This project is a scalable, high-performance task management platform engineered using Go microservices. It features six independent services, an API Gateway, and event-driven communication via Kafka, supporting real-time collaboration, JWT-based authentication, Saga pattern for distributed transactions, and robust team productivity tools.
+This project is a scalable, high-performance task management platform engineered using Go microservices. It features six independent services, an API Gateway, mixed REST/gRPC internal communication, Kafka-based eventing, OpenTelemetry tracing, Prometheus metrics with Grafana dashboards, Saga-based distributed transactions, and robust team productivity workflows.
 
 ## Architecture
 - **Microservices:**
@@ -20,6 +20,13 @@ This project is a scalable, high-performance task management platform engineered
   - Kafka-based message broker for asynchronous inter-service communication
   - Services publish and consume events (e.g., task.created, task.updated, task.assigned)
   - Enables loose coupling and scalability
+- **Service-to-Service RPC:**
+  - Protobuf contracts for internal APIs
+  - gRPC used for selected internal service communication paths
+- **Observability:**
+  - OpenTelemetry traces across gateway and services
+  - Prometheus metrics exported for service and infrastructure monitoring
+  - Grafana dashboard for request, event, and saga health
 - **Distributed Transactions:**
   - Saga pattern with choreography for coordinating multi-step operations
   - Database-level compensation for rollback on failures
@@ -29,6 +36,8 @@ This project is a scalable, high-performance task management platform engineered
 - **JWT Authentication:** Secure, stateless authentication across all services with context propagation
 - **Event-Driven Architecture:** Asynchronous communication with Kafka for loose coupling
 - **Saga Pattern:** Distributed transactions spanning multiple services with automatic compensation
+- **gRPC + Protobuf:** Typed internal communication for selected service interactions
+- **Observability Stack:** OpenTelemetry traces, Prometheus metrics, and Grafana dashboards
 - **Real-Time Notifications:** WebSocket-based updates and event-triggered alerts
 - **Structured Logging:** Zap-based logging for observability and debugging
 - **Scalable Design:** Independent databases per service for autonomy and scaling
@@ -42,7 +51,10 @@ This project is a scalable, high-performance task management platform engineered
 - **Gin** web framework for REST APIs
 - **Gorilla WebSocket** for real-time communication
 - **Kafka** for event streaming and async messaging
+- **gRPC + Protobuf** for selected service-to-service communication
 - **Zap** for structured, production-grade logging
+- **OpenTelemetry** for distributed tracing
+- **Prometheus + Grafana** for metrics and visualization
 - **SQLite/MySQL** for persistence (configurable per service)
 - **JWT** (golang-jwt/jwt/v4) for authentication
 - **Kubernetes & Helm** for container orchestration and deployment
@@ -205,64 +217,9 @@ Run all tests with:
 go test ./...
 ```
 
-### Comprehensive Testing Strategy (Recommended)
-To improve confidence across features, add tests in this order:
-
-1. **Core Unit Tests (fast feedback)**
-   - Task service edge cases:
-     - creating tasks with optional fields (`assignee_id`, `due_date`) missing
-     - invalid status transitions (if business rules are added)
-     - update/delete on non-existent task IDs
-   - Auth service:
-     - password hashing and verification
-     - JWT generation/parsing with expiration and malformed tokens
-   - Middleware:
-     - missing/invalid auth header
-     - role/permission enforcement scenarios
-
-2. **Repository + DB Integration Tests**
-   - CRUD lifecycle per service repository (create/read/update/delete)
-   - transaction and rollback behavior for failures
-   - constraints and data integrity checks (foreign key, nullability, uniqueness)
-   - pagination/filter queries where applicable
-
-3. **API/Handler Tests**
-   - request validation and status codes (`400`, `401`, `403`, `404`, `409`, `500`)
-   - happy path and error path for each endpoint in `auth`, `task`, `project`, `file`, and `notification`
-   - JSON schema/shape assertions for responses
-
-4. **Event-Driven and Saga Reliability Tests**
-   - verify event payload structure and required metadata fields
-   - test idempotency for duplicate event deliveries
-   - saga failure injection to ensure compensation is always triggered correctly
-   - out-of-order event handling for consumers
-
-5. **End-to-End and Performance Tests**
-   - API Gateway -> service routing tests for key user journeys
-   - WebSocket notification flow tests after task/project events
-   - load tests around task creation + event publication latency
-   - regression benchmarks for p95 response time and saga completion duration
-
-### Useful Commands for CI and Local Validation
-```sh
-# Unit/integration tests
-go test -v ./...
-
-# Coverage report
-go test -coverprofile=coverage.out ./...
-go tool cover -func=coverage.out
-
-# Race detector (high value for concurrent/event code)
-go test -race ./...
-
-# Repeat tests to catch flakiness
-go test -count=10 ./shared/... ./services/task/...
-```
+For detailed test expansion plans and CI-focused validation commands, see `NEXT_STEPS.md`.
 
 ## Future Enhancements
-- [ ] gRPC services for service-to-service communication
-- [ ] OpenTelemetry distributed tracing
-- [ ] Prometheus metrics and Grafana dashboards
 - [ ] Multi-region deployment support
 - [ ] Advanced authentication (OAuth2, LDAP)
 - [ ] Full-text search with Elasticsearch
