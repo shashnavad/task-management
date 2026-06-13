@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/gin-contrib/cors"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -34,7 +34,9 @@ func AuthMiddleware() gin.HandlerFunc {
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			c.Set("user_id", int(claims["user_id"].(float64)))
 			c.Set("username", claims["username"].(string))
-			c.Set("role", claims["role"].(string))
+			if role, ok := claims["role"].(string); ok {
+				c.Set("role", role)
+			}
 		}
 
 		c.Next()

@@ -10,6 +10,9 @@ kafka:
 notificationService:
   url: "notification-service:50051"
 
+redis:
+  addr: "redis-service:6379"
+
 resources:
   requests:
     memory: "128Mi"

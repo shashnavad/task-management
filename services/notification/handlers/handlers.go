@@ -90,11 +90,11 @@ func (h *NotificationHandler) HandleWebSocket(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	h.service.WsHub.Register(userID, conn)
-	defer func() {
-		h.service.WsHub.Unregister(userID, conn)
-		conn.Close()
-	}()
+	// Persistent notifications must not be silently dropped; use
+	// CloseConnection so a slow client is evicted and must reconnect.
+	h.service.WsHub.Register(userID, conn, service.CloseConnection)
+	defer h.service.WsHub.Unregister(userID, conn)
+	// conn.Close() is now handled by the session's writer goroutine.
 	// Keep the connection open
 	for {
 		_, _, err := conn.ReadMessage()
@@ -102,4 +102,4 @@ func (h *NotificationHandler) HandleWebSocket(c *gin.Context) {
 			break
 		}
 	}
-} 
+}

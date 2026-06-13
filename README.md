@@ -45,6 +45,8 @@ This project is a scalable, high-performance task management platform engineered
 - **Sub-100ms response times** (with proper deployment and tuning)
 - **Scales to 1,000+ users** (validated in simulated benchmarks)
 - **40% faster than monolithic baseline** (see [Performance](#performance))
+- **Horizontally-Scalable WebSocket Delivery:** Notification pods coordinate via Redis Pub/Sub. Any pod publishes an event; every pod receives it and forwards it to the target user if that connection lives locally, ensuring correct WebSocket routing regardless of which pod the client landed on.
+- **Per-Session Bounded Ring Buffer:** Each WebSocket connection owns a dedicated 128-slot send channel drained by a single writer goroutine. Slow clients never block the core Redis subscriber. On buffer saturation, a configurable `DropPolicy` either silently discards the frame (`DropMessage`, for transient events) or severs the connection immediately (`CloseConnection`, for persistent notifications), freeing memory deterministically.
 
 ## Technology Stack
 - **Go** (Golang 1.23+) for all services
@@ -58,6 +60,8 @@ This project is a scalable, high-performance task management platform engineered
 - **SQLite/MySQL** for persistence (configurable per service)
 - **JWT** (golang-jwt/jwt/v4) for authentication
 - **Kubernetes & Helm** for container orchestration and deployment
+- **Redis (go-redis/v9):** Distributed WebSocket fan-out Pub/Sub handling across concurrent pods.
+- **Miniredis (v2):** Embedded, isolated Redis emulator utilized for deterministic, race-guarded unit testing.
 
 ## Getting Started
 ### Prerequisites
@@ -144,6 +148,7 @@ kubectl port-forward svc/gateway 8080:8080
 - `KAFKA_BROKERS`: Kafka broker addresses (default: "localhost:9092")
 - `LOG_LEVEL`: Zap logger level (default: "info")
 - Database connection strings: Configure in each service's `repository/repository.go`
+- `REDIS_ADDR`: Connection string for the WebSocket fan-out backend (default: `localhost:6379`).
 
 ## API Endpoints
 ### Authentication (`/auth`)
@@ -206,15 +211,25 @@ kubectl port-forward svc/gateway 8080:8080
 ## Contributing
 Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
 
-## Testing
-Current test coverage includes:
-- `services/task/service/service_test.go` - Task service behavior and event emission
-- `shared/saga/saga_test.go` - Saga execution, failure handling, and compensation flow
-- `shared/events/events_test.go` - Event producer behavior
+## 🧪 Testing & Architecture Invariants
 
-Run all tests with:
+Current test coverage includes:
+- `services/notification/service/hub_test.go` — WebSocket hub: Redis fan-out, per-session ring buffer (drop and close policies, ordered delivery, multi-pod simulation, stale-connection eviction).
+- `services/task/service/service_test.go` — Task service behavior and event emission.
+- `shared/saga/saga_test.go` — Saga execution, failure handling, and compensation flow.
+- `shared/events/events_test.go` — Event producer behavior.
+
+### Concurrency & Performance Guards
+- **Concurrency Guard:** `gorilla/websocket` connections are not thread-safe. The `writeLoop` background goroutine is the exclusive writer for each network socket. Do not inject inline `WriteMessage` calls elsewhere in the application state.
+
+### Execution Commands
+Run the complete test suite with the concurrency race detector enabled:
 ```sh
-go test ./...
+go test -race ./...
+```
+💡 **Pro-Tip:** If the `[no test files]` output lines are too noisy for your local development workflow, you can filter them out by piping the results:
+```sh
+go test -race ./... | awk '!/\[no test files\]/'
 ```
 
 For detailed test expansion plans and CI-focused validation commands, see `NEXT_STEPS.md`.
